@@ -13,12 +13,19 @@ import timeout_decorator
 
 DEBUG = False
 
+BETWEEN_BREAKS = 60 * 15  # 15 minutes
+BREAK_LENGTH = 60 * 2  # 2 minutes
+
+LEAN_SCALE = 1.3 # How many times bigger face must be than in calibration to trigger lean
+
 # Path to face cascade
 cascPath = "./facecascade.xml"
 faceCascade = cv2.CascadeClassifier(cascPath)
 
 # Start webcam capture
-video_capture = cv2.VideoCapture('http://10.0.0.14:4747/mjpegfeed')
+video_capture = cv2.VideoCapture(0)
+# Also try a video stream such as http://10.0.0.255:4747/mjpegfeed (DroidCam)
+
 camera_working = True
 
 
@@ -27,6 +34,8 @@ def test_cam(cap):
     if cap is None or not cap.isOpened():
         return False
     r, f = cap.read()
+	if f is None:
+		return False
     return True
 
 
@@ -46,10 +55,6 @@ is_slouching = False
 current_break = False
 since_last_sighting = 0
 
-BETWEEN_BREAKS = 60 * 15  # 15 minutes
-BREAK_LENGTH = 30  # 2 minutes
-
-LEAN_SCALE = 1.3
 
 
 def dispHelp():
@@ -63,20 +68,24 @@ class SystemTrayIcon(QSystemTrayIcon):
 
     def __init__(self, icon, parent=None):
         super(SystemTrayIcon, self).__init__(icon, parent)
+		# Right-click menu
         menu = QMenu(parent)
+		# Exit on click
         self.activated.connect(exitApp)
+		# Add menu items
         helpAction = menu.addAction("About")
         exitAction = menu.addAction("Exit")
         exitAction.triggered.connect(exitApp)
         helpAction.triggered.connect(dispHelp)
         self.setContextMenu(menu)
 
-
+# Dims the screen aroundthe notification
 class Dimmer(QWidget):
 
     def __init__(self, win):
         super().__init__()
         self.par = win
+		## Geometry
         self.title = ''
         self.left = 10
         self.top = 10
@@ -85,20 +94,26 @@ class Dimmer(QWidget):
         self.initUI()
 
     def initUI(self):
+		# No frame
         self.setWindowFlag(QtCore.Qt.FramelessWindowHint)
+		# 70% opacity
         self.setWindowOpacity(0.7)
+		# Needed for transparency
         self.setAttribute(QtCore.Qt.WA_NoSystemBackground, True)
-        self.setWindowFlags(QtCore.Qt.FramelessWindowHint)
+		# Assign geometry
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
 
     def closeEvent(self, event):
-        # Don't
+        # Don't :^)
         event.ignore()
 
     def activate(self):
+		# Show full screen
         self.showFullScreen()
+		# Wait, to make sure parent is on top
         time.sleep(0.1)
+		# Activate parent
         self.par.activateWindow()
 
 
@@ -185,7 +200,8 @@ def calibration_mean(data):
 def update_lean():
     global is_leaning
     global systemtray_icon
-    print("[DEBUG] Leaning now " + str(is_leaning))
+	if DEBUG:
+    	print("[DEBUG] Leaning now " + str(is_leaning))
     if (is_leaning):
         # systemtray_icon.showMessage('AntiSlouch', "You're leaning into your computer.")
         notify("You're slouching. Sit up!")
@@ -197,7 +213,8 @@ def update_lean():
 def update_slouch():
     global is_slouching
     global systemtray_icon
-    print("[DEBUG] Slouching now " + str(is_slouching))
+	if DEBUG:
+    	print("[DEBUG] Slouching now " + str(is_slouching))
     if (is_slouching):
         # systemtray_icon.showMessage('AntiSlouch', "You're slouching. Sit up!")
         notify("You're slouching. Sit up!")
@@ -208,7 +225,8 @@ def update_slouch():
 
 def notify(text, redo=True):
     # ex.activateWindow()
-    print("[DEBUG] Notify: " + text)
+    if DEBUG:
+    	print("[DEBUG] Notify: " + text)
     if redo:
         ex.show()
         ex.dim.activate()
@@ -326,10 +344,12 @@ def main():
         if (calibrated == 1):
             # Set if at computer
             if (since_last_sighting > 5 and at_computer):
-                print("[DEBUG] No longer at computer")
+                if DEBUG:
+    				print("[DEBUG] No longer at computer")
                 at_computer = False
             elif (since_last_sighting < -5 and not at_computer):
-                print("[DEBUG] Now at computer")
+                if DEBUG:
+    				print("[DEBUG] Now at computer")
                 at_computer = True
         elif ('ex' in globals()):
             ex.calibrateIsFace.setStyleSheet(
@@ -351,8 +371,7 @@ def take_break():
     if DEBUG:
         time.sleep(15)
     else:
-        time.sleep(15)
-        # time.sleep(BETWEEN_BREAKS)
+        time.sleep(BETWEEN_BREAKS)
     while True:
         # Log the start
         starttime = time.time()
