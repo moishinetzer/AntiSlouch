@@ -24,14 +24,19 @@ Download and install OpenCV [here](https://pypi.org/project/opencv-python/)
 Install requirements:
 
 ```bash
-pip install -r requirements.txt
+pip3 install -r requirements.txt
+```
+
+Run app:
+```bash
+python3 slouch.py
 ```
 
 ### Setup
 
 You shouldn't need setup, probably, unless you have a non-conventional webcam.
 
-**DISCLAIMER:** This has only been tested in KDE, on Linux.
+**DISCLAIMER:** This has only been tested on Linux.
 
 ## License
 
